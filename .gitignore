@@ -1,9 +1,14 @@
 node_modules/
 .env
+.env.local
 uploads/
 *.log
 .DS_Store
 # Large Excel files
 *.xlsx
 *.xls
+# Test data
+test-data/
+# Vercel
+.vercel
 

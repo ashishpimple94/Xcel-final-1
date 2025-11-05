@@ -50,16 +50,22 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
+// Start server (only in non-serverless environments)
 const PORT = process.env.PORT || 8000;
 
-app.listen(PORT, () => {
-  console.log(`
+// Export app for Vercel serverless functions
+export default app;
+
+// Only start server if not in Vercel environment
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`
 ╔════════════════════════════════════════════╗
 ║   🚀 Server running on port ${PORT}         ║
 ║   📁 Excel Upload API is ready!            ║
 ║   🔗 http://localhost:${PORT}               ║
 ╚════════════════════════════════════════════╝
-  `);
-});
+    `);
+  });
+}
 
