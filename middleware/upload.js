@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Use memory storage for Vercel (serverless), disk storage for regular servers
-const isVercel = process.env.VERCEL === '1';
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || process.env.VERCEL;
 
 const storage = isVercel 
   ? multer.memoryStorage() // Vercel: use memory storage (read-only filesystem)

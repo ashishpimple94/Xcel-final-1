@@ -76,7 +76,7 @@ export const uploadExcel = asyncHandler(async (req, res) => {
   }
 
   // Handle both memory storage (Vercel) and disk storage (regular servers)
-  const isVercel = process.env.VERCEL === '1';
+  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || process.env.VERCEL;
   const workbook = isVercel 
     ? XLSX.read(req.file.buffer, { type: 'buffer' }) // Vercel: read from memory buffer
     : XLSX.readFile(req.file.path); // Regular server: read from file path

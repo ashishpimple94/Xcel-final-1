@@ -49,7 +49,8 @@ const connectDB = async () => {
     console.error('Error:', error.message);
     
     // Don't exit process in serverless - let it retry
-    if (process.env.VERCEL !== '1') {
+    const isServerless = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || process.env.VERCEL;
+    if (!isServerless) {
       process.exit(1);
     }
     

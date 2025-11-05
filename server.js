@@ -22,7 +22,8 @@ const app = express();
 
 // Create uploads directory if it doesn't exist (only in non-serverless environments)
 // Vercel uses read-only filesystem, so we skip this in serverless
-if (process.env.VERCEL !== '1' && !fs.existsSync('uploads')) {
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || process.env.VERCEL;
+if (!isVercel && !fs.existsSync('uploads')) {
   fs.mkdirSync('uploads', { recursive: true });
 }
 
@@ -62,7 +63,8 @@ const PORT = process.env.PORT || 8000;
 export default app;
 
 // Only start server if not in Vercel environment
-if (process.env.VERCEL !== '1') {
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || process.env.VERCEL;
+if (!isVercel) {
   app.listen(PORT, () => {
     console.log(`
 ╔════════════════════════════════════════════╗
