@@ -1,1 +1,0 @@
-mongodb+srv://voterlist1:ashishp1212@cluster0.ezzkjmw.mongodb.net/voter-db?retryWrites=true&w=majority
