@@ -10,8 +10,12 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (lazy connection for serverless)
+// Don't await here - let it connect in background
+connectDB().catch((err) => {
+  console.error('MongoDB connection error:', err);
+  // Don't crash the server, let it retry on next request
+});
 
 // Initialize Express app
 const app = express();
