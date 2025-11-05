@@ -3,20 +3,26 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = 'uploads/';
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueFilename = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueFilename);
-  },
-});
+// Use memory storage for Vercel (serverless), disk storage for regular servers
+const isVercel = process.env.VERCEL === '1';
+
+const storage = isVercel 
+  ? multer.memoryStorage() // Vercel: use memory storage (read-only filesystem)
+  : multer.diskStorage({
+      // Regular server: use disk storage
+      destination: (req, file, cb) => {
+        const uploadDir = 'uploads/';
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueFilename = `${Date.now()}-${file.originalname}`;
+        cb(null, uniqueFilename);
+      },
+    });
 
 const fileFilter = (req, file, cb) => {
   console.log('File received:', file.originalname, file.mimetype);

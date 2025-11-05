@@ -16,9 +16,10 @@ connectDB();
 // Initialize Express app
 const app = express();
 
-// Create uploads directory if it doesn't exist
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+// Create uploads directory if it doesn't exist (only in non-serverless environments)
+// Vercel uses read-only filesystem, so we skip this in serverless
+if (process.env.VERCEL !== '1' && !fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads', { recursive: true });
 }
 
 // Middleware

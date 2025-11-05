@@ -75,7 +75,11 @@ export const uploadExcel = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'No file uploaded. Send file field as "file" using multipart/form-data.' });
   }
 
-  const workbook = XLSX.readFile(req.file.path);
+  // Handle both memory storage (Vercel) and disk storage (regular servers)
+  const isVercel = process.env.VERCEL === '1';
+  const workbook = isVercel 
+    ? XLSX.read(req.file.buffer, { type: 'buffer' }) // Vercel: read from memory buffer
+    : XLSX.readFile(req.file.path); // Regular server: read from file path
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
   
