@@ -30,18 +30,31 @@ const connectDB = async () => {
     // If connection is in progress, wait for it
     if (!cached.promise) {
       const opts = {
-        bufferCommands: false,
-        serverSelectionTimeoutMS: 10000,
+        bufferCommands: false, // Don't buffer commands - fail fast if not connected
+        serverSelectionTimeoutMS: 30000, // Increased timeout
         socketTimeoutMS: 45000,
+        maxPoolSize: 10,
+        minPoolSize: 1,
       };
       
       cached.promise = mongoose.connect(mongoURI.trim(), opts).then((mongoose) => {
         console.log('✅ MongoDB Connected Successfully!');
+        console.log('   Ready State:', mongoose.connection.readyState);
         return mongoose;
       });
     }
     
     cached.conn = await cached.promise;
+    
+    // Ensure connection is actually ready
+    if (cached.conn.connection.readyState !== 1) {
+      // Connection not ready, wait a bit and check again
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (cached.conn.connection.readyState !== 1) {
+        throw new Error('MongoDB connection not ready');
+      }
+    }
+    
     return cached.conn;
   } catch (error) {
     cached.promise = null; // Reset promise on error

@@ -784,7 +784,21 @@ export const uploadExcel = asyncHandler(async (req, res) => {
   console.log('Sample row field count:', Object.keys(normalizedRows[0]).length);
   console.log('Sample row all keys:', Object.keys(normalizedRows[0]));
 
-  const inserted = await Voter.insertMany(normalizedRows, { ordered: false });
+  // Ensure MongoDB connection is ready before insert
+  const mongoose = await import('mongoose');
+  if (mongoose.default.connection.readyState !== 1) {
+    const connectDB = (await import('../config/db.js')).default;
+    await connectDB();
+    // Wait for connection to be ready
+    while (mongoose.default.connection.readyState !== 1) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+  
+  const inserted = await Voter.insertMany(normalizedRows, { 
+    ordered: false,
+    maxTimeMS: 60000 // 60 seconds for large inserts
+  });
 
   return res.status(201).json({
     success: true,
@@ -1095,6 +1109,18 @@ const addEnglishColumns = (voter) => {
 };
 
 export const getAllVoters = asyncHandler(async (req, res) => {
+  // Ensure MongoDB connection is ready before operations
+  const mongoose = await import('mongoose');
+  if (mongoose.default.connection.readyState !== 1) {
+    // Connection not ready, ensure connection
+    const connectDB = (await import('../config/db.js')).default;
+    await connectDB();
+    // Wait for connection to be ready
+    while (mongoose.default.connection.readyState !== 1) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+  
   // Pagination parameters
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 100; // Default 100 records per page
@@ -1104,13 +1130,14 @@ export const getAllVoters = asyncHandler(async (req, res) => {
   const maxLimit = 1000;
   const actualLimit = Math.min(limit, maxLimit);
   
-  // Get total count
-  const totalCount = await Voter.countDocuments({});
+  // Get total count (with connection check)
+  const totalCount = await Voter.countDocuments({}).maxTimeMS(30000);
   
   // Get paginated data
   const voters = await Voter.find({})
     .skip(skip)
     .limit(actualLimit)
+    .maxTimeMS(30000)
     .lean();
   
   // Transform each voter to add English columns and clean data
@@ -1137,7 +1164,18 @@ export const getAllVoters = asyncHandler(async (req, res) => {
 });
 
 export const getVoterById = asyncHandler(async (req, res) => {
-  const voter = await Voter.findById(req.params.id).lean();
+  // Ensure MongoDB connection is ready
+  const mongoose = await import('mongoose');
+  if (mongoose.default.connection.readyState !== 1) {
+    const connectDB = (await import('../config/db.js')).default;
+    await connectDB();
+    // Wait for connection to be ready
+    while (mongoose.default.connection.readyState !== 1) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+  
+  const voter = await Voter.findById(req.params.id).maxTimeMS(30000).lean();
   if (!voter) {
     return res.status(404).json({ success: false, message: 'Record not found' });
   }
@@ -1147,6 +1185,17 @@ export const getVoterById = asyncHandler(async (req, res) => {
 });
 
 export const deleteAllVoters = asyncHandler(async (req, res) => {
-  const result = await Voter.deleteMany({});
+  // Ensure MongoDB connection is ready
+  const mongoose = await import('mongoose');
+  if (mongoose.default.connection.readyState !== 1) {
+    const connectDB = (await import('../config/db.js')).default;
+    await connectDB();
+    // Wait for connection to be ready
+    while (mongoose.default.connection.readyState !== 1) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+  
+  const result = await Voter.deleteMany({}).maxTimeMS(30000);
   res.json({ success: true, deletedCount: result.deletedCount || 0 });
 });
