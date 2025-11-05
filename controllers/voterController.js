@@ -789,9 +789,15 @@ export const uploadExcel = asyncHandler(async (req, res) => {
   if (mongoose.default.connection.readyState !== 1) {
     const connectDB = (await import('../config/db.js')).default;
     await connectDB();
-    // Wait for connection to be ready
-    while (mongoose.default.connection.readyState !== 1) {
+    // Wait for connection to be ready (max 10 seconds)
+    let attempts = 0;
+    const maxAttempts = 200;
+    while (mongoose.default.connection.readyState !== 1 && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 50));
+      attempts++;
+    }
+    if (mongoose.default.connection.readyState !== 1) {
+      throw new Error('MongoDB connection timeout');
     }
   }
   
@@ -1115,9 +1121,15 @@ export const getAllVoters = asyncHandler(async (req, res) => {
     // Connection not ready, ensure connection
     const connectDB = (await import('../config/db.js')).default;
     await connectDB();
-    // Wait for connection to be ready
-    while (mongoose.default.connection.readyState !== 1) {
+    // Wait for connection to be ready (max 10 seconds)
+    let attempts = 0;
+    const maxAttempts = 200; // 200 * 50ms = 10 seconds
+    while (mongoose.default.connection.readyState !== 1 && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 50));
+      attempts++;
+    }
+    if (mongoose.default.connection.readyState !== 1) {
+      throw new Error('MongoDB connection timeout - connection not ready after 10 seconds');
     }
   }
   
@@ -1169,9 +1181,15 @@ export const getVoterById = asyncHandler(async (req, res) => {
   if (mongoose.default.connection.readyState !== 1) {
     const connectDB = (await import('../config/db.js')).default;
     await connectDB();
-    // Wait for connection to be ready
-    while (mongoose.default.connection.readyState !== 1) {
+    // Wait for connection to be ready (max 10 seconds)
+    let attempts = 0;
+    const maxAttempts = 200;
+    while (mongoose.default.connection.readyState !== 1 && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 50));
+      attempts++;
+    }
+    if (mongoose.default.connection.readyState !== 1) {
+      throw new Error('MongoDB connection timeout');
     }
   }
   
@@ -1190,9 +1208,15 @@ export const deleteAllVoters = asyncHandler(async (req, res) => {
   if (mongoose.default.connection.readyState !== 1) {
     const connectDB = (await import('../config/db.js')).default;
     await connectDB();
-    // Wait for connection to be ready
-    while (mongoose.default.connection.readyState !== 1) {
+    // Wait for connection to be ready (max 10 seconds)
+    let attempts = 0;
+    const maxAttempts = 200;
+    while (mongoose.default.connection.readyState !== 1 && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 50));
+      attempts++;
+    }
+    if (mongoose.default.connection.readyState !== 1) {
+      throw new Error('MongoDB connection timeout');
     }
   }
   
