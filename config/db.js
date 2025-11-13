@@ -19,7 +19,57 @@ const connectDB = async () => {
     if (!mongoURI || typeof mongoURI !== 'string' || mongoURI.trim() === '') {
       console.error('❌ ERROR: MongoDB URI is not set!');
       console.error('Please set MONGODB_URI environment variable.');
+      console.error('Available env vars:', {
+        MONGODB_URI: !!process.env.MONGODB_URI,
+        MONGO_URL: !!process.env.MONGO_URL,
+        MONGODB_URL: !!process.env.MONGODB_URL,
+        DATABASE_URL: !!process.env.DATABASE_URL
+      });
       throw new Error('MongoDB URI is not configured');
+    }
+    
+    // Validate and normalize connection string
+    let normalizedURI = mongoURI.trim();
+    
+    // Check if URI starts with mongodb:// or mongodb+srv://
+    if (!normalizedURI.startsWith('mongodb://') && !normalizedURI.startsWith('mongodb+srv://')) {
+      console.error('❌ ERROR: Invalid MongoDB URI format!');
+      console.error('   URI must start with mongodb:// or mongodb+srv://');
+      console.error('   Received:', normalizedURI.substring(0, 50) + '...');
+      throw new Error('Invalid MongoDB URI format');
+    }
+    
+    // Extract database name from URI for validation
+    try {
+      const url = new URL(normalizedURI);
+      const pathname = url.pathname;
+      const dbName = pathname.split('/')[1] || '';
+      
+      // If no database name in URI, add default or warn
+      if (!dbName || dbName.trim() === '') {
+        console.warn('⚠️  WARNING: No database name found in connection string!');
+        console.warn('   Adding default database name: voterlist');
+        // Add database name to URI
+        if (normalizedURI.includes('?')) {
+          // Has query params
+          normalizedURI = normalizedURI.replace('?', '/voterlist?');
+        } else {
+          // No query params
+          normalizedURI = normalizedURI + '/voterlist';
+        }
+      } else {
+        console.log('✅ Database name detected:', dbName);
+      }
+      
+      // Validate username and password are present
+      if (url.username === '' || url.password === '') {
+        console.warn('⚠️  WARNING: Username or password might be missing in connection string!');
+      }
+      
+    } catch (urlError) {
+      console.error('❌ ERROR: Failed to parse MongoDB URI!');
+      console.error('   Error:', urlError.message);
+      throw new Error('Invalid MongoDB URI format - cannot parse');
     }
     
     // If already connected, check if it's still valid
@@ -48,9 +98,20 @@ const connectDB = async () => {
       };
       
       console.log('🔗 Connecting to MongoDB...');
-      console.log('   URI format:', mongoURI.trim().substring(0, 30) + '...');
+      console.log('   URI format:', normalizedURI.substring(0, 30) + '...');
+      console.log('   Full URI length:', normalizedURI.length, 'characters');
       
-      cached.promise = mongoose.connect(mongoURI.trim(), opts)
+      // Log connection attempt details (without sensitive info)
+      try {
+        const url = new URL(normalizedURI);
+        console.log('   Host:', url.hostname);
+        console.log('   Username:', url.username ? '***' + url.username.substring(url.username.length - 2) : 'NOT SET');
+        console.log('   Database:', url.pathname.split('/')[1] || 'NOT SET');
+      } catch (e) {
+        // Ignore parsing errors here, already validated above
+      }
+      
+      cached.promise = mongoose.connect(normalizedURI, opts)
         .then((mongoose) => {
           console.log('✅ MongoDB Connected Successfully!');
           console.log('   Host:', mongoose.connection.host);

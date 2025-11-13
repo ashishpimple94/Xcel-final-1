@@ -785,10 +785,28 @@ export const uploadExcel = asyncHandler(async (req, res) => {
   console.log('Sample row all keys:', Object.keys(normalizedRows[0]));
 
   // Ensure MongoDB connection is ready before insert
+  console.log('\n📊 Preparing to insert data into MongoDB...');
+  console.log('   Rows to insert:', normalizedRows.length);
+  
   const mongoose = await import('mongoose');
+  console.log('   Current connection state:', mongoose.default.connection.readyState);
+  console.log('   Connection states: 0=disconnected, 1=connected, 2=connecting, 3=disconnecting');
+  
   if (mongoose.default.connection.readyState !== 1) {
+    console.log('   Connection not ready, establishing connection...');
     const connectDB = (await import('../config/db.js')).default;
-    await connectDB();
+    try {
+      await connectDB();
+    } catch (connError) {
+      console.error('❌ Connection error:', connError.message);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to connect to MongoDB',
+        error: connError.message,
+        details: 'Please check MONGODB_URI environment variable'
+      });
+    }
+    
     // Wait for connection to be ready (max 10 seconds)
     let attempts = 0;
     const maxAttempts = 200;
@@ -797,26 +815,65 @@ export const uploadExcel = asyncHandler(async (req, res) => {
       attempts++;
     }
     if (mongoose.default.connection.readyState !== 1) {
-      throw new Error('MongoDB connection timeout');
+      console.error('❌ Connection timeout after', maxAttempts * 50, 'ms');
+      return res.status(500).json({ 
+        success: false, 
+        message: 'MongoDB connection timeout',
+        details: 'Connection not ready after 10 seconds. Check MONGODB_URI and network access.'
+      });
     }
+    console.log('✅ Connection established successfully!');
+  } else {
+    console.log('✅ Using existing connection');
   }
   
-  const inserted = await Voter.insertMany(normalizedRows, { 
-    ordered: false,
-    maxTimeMS: 60000 // 60 seconds for large inserts
-  });
+  console.log('   Final connection state:', mongoose.default.connection.readyState);
+  console.log('   Database name:', mongoose.default.connection.name);
+  console.log('   Host:', mongoose.default.connection.host);
+  
+  // Attempt to insert data
+  try {
+    console.log('   Starting insert operation...');
+    const inserted = await Voter.insertMany(normalizedRows, { 
+      ordered: false,
+      maxTimeMS: 60000 // 60 seconds for large inserts
+    });
+    console.log('✅ Successfully inserted', inserted.length, 'records');
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Data uploaded successfully.',
+      insertedCount: inserted.length,
+      fieldsDetected: headers.length,
+      hindiFields: headers,
+      englishFields: englishFields,
+      fieldNames: [...headers, ...englishFields],
+      sampleRow: normalizedRows[0],
+      note: 'Use GET /api/voters?page=1&limit=100 to fetch data with pagination'
+    });
+  } catch (insertError) {
+    console.error('❌ Insert error:', insertError.message);
+    console.error('   Error code:', insertError.code);
+    console.error('   Error name:', insertError.name);
+    
+    // Provide helpful error messages
+    let errorMessage = 'Failed to insert data into MongoDB';
+    if (insertError.message.includes('authentication')) {
+      errorMessage = 'MongoDB authentication failed. Check username and password in MONGODB_URI';
+    } else if (insertError.message.includes('network') || insertError.message.includes('timeout')) {
+      errorMessage = 'MongoDB network error. Check network access and connection string';
+    } else if (insertError.message.includes('E11000')) {
+      errorMessage = 'Duplicate key error. Some records already exist in database';
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: errorMessage,
+      error: insertError.message,
+      details: 'Check MongoDB connection string and network access'
+    });
+  }
 
-  return res.status(201).json({
-    success: true,
-    message: 'Data uploaded successfully.',
-    insertedCount: inserted.length,
-    fieldsDetected: headers.length,
-    hindiFields: headers,
-    englishFields: englishFields,
-    fieldNames: [...headers, ...englishFields],
-    sampleRow: normalizedRows[0],
-    note: 'Use GET /api/voters?page=1&limit=100 to fetch data with pagination'
-  });
 });
 
 // Helper function to add English columns to voter records
